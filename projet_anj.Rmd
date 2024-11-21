@@ -1,0 +1,627 @@
+---
+title: "Projet basé sur Autor et al. (2013, ARE)."
+author: "Redigé par Alè OUATTARA"
+date: "2022-12-31"
+output: 
+  html_document: 
+    toc: yes
+    toc_depth: 6
+    df_print: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(haven) #pour charger une base avec read_dta
+
+path = "D:/ECOLE/MAG1/Mes_cours/Projet_econometrique_R/Projets/Projet_3/"
+datafile = read_dta(paste0(path,"workfile_china.dta"))
+
+library(AER) # pour ivreg
+library(stargazer)
+
+path2 = "D:/AMSE_MAG1/Projet_Econometrie/"
+adh = read_dta(paste0(path,"input_ADH.dta"))
+library(tidyverse)
+
+
+```
+
+# Question 1 : Explication de la conception de la recherche du document.
+
+La croissance des importations américaines en provenance de Chine affecte la demande de produits dans les différentes économies régionales américaines. Cette étude cherche à mesurer l’exposition à cette concurrence des importations chinoises dans l’économie américaine. En particulier, l’impact de la variation des importations chinoises sur la variation de l’emploi et du salaire dans les économies régionales américaines à partir d’une régression linéaire multivariée. Cependant, l'estimation par les MCO de la façon dont l'augmentation des importations en provenance de Chine affecte l'emploi manufacturier américain peut sous-estimer l'impact réel, car l'emploi et les importations aux États-Unis peuvent être positivement corrélés avec des chocs non observés sur la demande de produits aux États-Unis. Pour identifier l'effet causal de l'augmentation de l'exposition aux importations chinoises sur l'emploi manufacturier américain et d'autres résultats du marché du travail local, une stratégie de variables instrumentales qui tient compte de l'endogénéité potentielle de l'exposition commerciale américaine a été adoptée. Ainsi, la variable d'exposition aux importations américaines provenant de la chine est instrumentée par la variable d'exposition aux importations de 8 autres pays à revenu élevé provenant de la chine. Cette variable instrumentale **d_tradeotch_pw_lag** est pertinente car elle est corrélée avec notre variable explicative **d_tradeusch_pw** et non corrélée avec des causes endogènes de la demande de produits américains.
+
+# Question 2 : tâches de réplication.
+
+## Question 2.1 : Replication du tableau 2.1
+
+```{r, eval=FALSE}
+library(haven) ## Pour charger la base workfile_china.dta
+
+path = "D:/ECOLE/MAG1/Mes_cours/Projet_econometrique_R/Projets/Projet_3/"
+datafile = read_dta(paste0(path,"workfile_china.dta"))
+
+```
+
+```{r, eval = FALSE}
+library(tidyverse) # pour le pip
+
+library(stargazer) # Pour stargazer
+library(AER) # pour ivreg
+library(sandwich) 
+
+datafile$statefip = factor(datafile$statefip)  
+```
+
+```{r, eval=FALSE}
+
+reg.univar1 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw |d_tradeotch_pw_lag , weight=timepwt48, subset=(yr==1990), data=datafile)
+robust.se1 = sqrt(diag(vcovCL(reg.univar1, cluster= ~ statefip,type="HC1")))
+
+reg.univar2 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw |d_tradeotch_pw_lag , weight=timepwt48, subset=(yr==2000), data=datafile)
+robust.se2 = sqrt(diag(vcovCL(reg.univar2, cluster= ~ statefip,type="HC1")))
+
+reg.univar3 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw + t2|d_tradeotch_pw_lag + t2, weight=timepwt48, data=datafile)
+robust.se3 = sqrt(diag(vcovCL(reg.univar3, cluster= ~ statefip,type="HC1")))
+
+
+stargazer(reg.univar1, reg.univar2, reg.univar3,
+          dep.var.caption="",dep.var.labels="",
+          keep.stat=c("n","rsq"),
+          no.space=TRUE, digits=3,
+          keep=c("d_tradeusch_pw"),
+          se= list(robust.se1,robust.se2,robust.se3), 
+          column.labels=c("1990", "2000", ">=1990"),
+          title="Replicating Table 2.I", type="text"
+)
+```
+
+Le tableau 2.1 représente l'impact des importations en provenance de la Chine sur l'emploi dans le secteur manufacturier au cours des périodes suivantes : 1990-2000, 2000-2007 et 1990-2007 à travers des regressions. En effet:
+
+-   Pour la période 1990-2000, lorsque la variation de l'exposition à l'importation par travailleur augmente d'un point, l'emploi dans le secteur manufacturier diminue de 0.888 points.
+-   Pour la période 2000-2007, lorsque la variation de l'exposition à l'importation par travailleur augmente d'un point, l'emploi dans le secteur manufacturier diminue de 0.718 points.
+-   Pour les deux périodes empilée, lorsque la variation de l'exposition à l'importation par travailleur augmente d'un point, l'emploi dans le secteur manufacturier diminue de de 3/4 de point.\
+    Ainsi, on observe une corrélation naégative entre l'exposition à l'importation et l'emploi dans le secteur manufacturier. Elle est plus accentuée dans le période 1990-2000.
+
+```{r, echo=FALSE}
+
+reg.univar1 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw |d_tradeotch_pw_lag , weight=timepwt48, subset=(yr==1990), data=datafile)
+robust.se1 = sqrt(diag(vcovCL(reg.univar1, cluster= ~ statefip,type="HC1")))
+
+reg.univar2 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw |d_tradeotch_pw_lag , weight=timepwt48, subset=(yr==2000), data=datafile)
+robust.se2 = sqrt(diag(vcovCL(reg.univar2, cluster= ~ statefip,type="HC1")))
+
+reg.univar3 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw + t2|d_tradeotch_pw_lag + t2, weight=timepwt48, data=datafile)
+robust.se3 = sqrt(diag(vcovCL(reg.univar3, cluster= ~ statefip,type="HC1")))
+
+
+stargazer(reg.univar1, reg.univar2, reg.univar3,
+          dep.var.caption="",dep.var.labels="",
+          keep.stat=c("n","rsq"),
+          no.space=TRUE, digits=3,
+          keep=c("d_tradeusch_pw"),
+          se= list(robust.se1,robust.se2,robust.se3), 
+          column.labels=c("1990", "2000", ">=1990"),
+          title="Replicating Table 2.I", type="text"
+)
+```
+
+## Question 2.2 : Replication du tableau 3
+
+```{r, eval = FALSE}
+
+reg_1 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw + t2 |d_tradeotch_pw_lag + t2 , weight=timepwt48, data=datafile)
+rob.se1 = sqrt(diag(vcovCL(reg_1, cluster= ~ statefip,type="HC1")))
+
+
+reg_2 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw + l_shind_manuf_cbp + t2 |d_tradeotch_pw_lag + l_shind_manuf_cbp + t2, weight=timepwt48, data=datafile)
+rob.se2 = sqrt(diag(vcovCL(reg_2, cluster= ~ statefip,type="HC1")))
+
+
+
+reg_3 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw + l_shind_manuf_cbp + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+ reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+ reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+
+rob.se3 = sqrt(diag(vcovCL(reg_3, cluster= ~ statefip,type="HC1")))
+
+reg_4 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c + l_sh_popfborn + l_sh_empl_f + t2 +
+                reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen +reg_wscen+ reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c + l_sh_popfborn + l_sh_empl_f + t2+
+                reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen +reg_wscen+ reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+
+rob.se4 = sqrt(diag(vcovCL(reg_4, cluster= ~ statefip,type="HC1")))
+
+reg_5 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_routine33 + l_task_outsource + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif | d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_routine33 + l_task_outsource + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48 , data=datafile)
+rob.se5 = sqrt(diag(vcovCL(reg_5, cluster= ~ statefip,type="HC1")))
+
+reg_6 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.se6 = sqrt(diag(vcovCL(reg_6, cluster= ~ statefip,type="HC1")))
+
+
+stargazer(reg_1, reg_2,reg_3,reg_4,reg_5,reg_6,
+          dep.var.caption="",dep.var.labels="",
+          omit.stat = c("all"),
+          no.space=TRUE, digits=3,
+          keep=c("d_tradeusch_pw","l_shind_manuf_cbp", "l_sh_popedu_c", "l_sh_popfborn",
+                 "l_sh_empl_f", "l_sh_routine33", "l_task_outsource"),
+          se= list(rob.se1,rob.se2,rob.se3,rob.se4,rob.se5,rob.se6), 
+          column.labels=c(""),
+          title="I. 1990-2007 stacked first differences", type="text", add.lines = list(c("Census division dummies","No","No","Yes","Yes","Yes","Yes"))
+)
+
+```
+
+```{r, eval=FALSE}
+
+sls_1 <- lm(d_tradeusch_pw ~ d_tradeotch_pw_lag + t2 , weight=timepwt48, data=datafile)
+rob.sls1 = sqrt(diag(vcovCL(sls_1, cluster= ~ statefip,type="HC1")))
+
+sls_2 <- lm(d_tradeusch_pw ~ d_tradeotch_pw_lag + l_shind_manuf_cbp + t2, weight=timepwt48, data=datafile)
+rob.sls2 = sqrt(diag(vcovCL(sls_2, cluster= ~ statefip,type="HC1")))
+
+sls_3 <- lm(d_tradeusch_pw ~ d_tradeotch_pw_lag + l_shind_manuf_cbp + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+ reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+
+rob.sls3 = sqrt(diag(vcovCL(sls_3, cluster= ~ statefip,type="HC1")))
+
+sls_4 <- lm(d_tradeusch_pw ~ d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c + l_sh_popfborn + l_sh_empl_f + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen +reg_wscen+ reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+
+rob.sls4 = sqrt(diag(vcovCL(sls_4, cluster= ~ statefip,type="HC1")))
+
+sls_5 <- lm(d_tradeusch_pw ~ d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_routine33 + l_task_outsource + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif , weight=timepwt48 , data=datafile)
+rob.sls5 = sqrt(diag(vcovCL(sls_5, cluster= ~ statefip,type="HC1")))
+
+sls_6 <- lm(d_tradeusch_pw ~ d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.sls6 = sqrt(diag(vcovCL(sls_6, cluster= ~ statefip,type="HC1")))
+
+stargazer(sls_1, sls_2,sls_3,sls_4,sls_5,sls_6,
+          dep.var.caption="",dep.var.labels="",
+          keep.stat=c("rsq"),
+          no.space=TRUE, digits=3,
+          keep=c("d_tradeotch_pw_lag"),
+          se= list(rob.sls1,rob.sls2,rob.sls3,rob.sls4,rob.sls5,rob.sls6), 
+          column.labels=c(""),
+          title="II. 2SLS First stage estimates", type="text"
+)
+
+```
+
+Dans le tableau 3, nous ajoutons des variables d'ordre démographique et en rapport avec la main d'oeuvre en plus de l'importation venant de la Chine pour la période 2000-2007.
+
+-   Lorsque le pourcentage initial de l'emploi dans le secteur manufacturier augmente d'un point, la variation de l'emploi dans le secteur manufacturier diminue de 0,035 point. d'après la colonne 2.\
+-   En ajoutant les variables indicatrices géographiques, l'on remarque une légère diminution de l'effet de l'exposition à l'importation.\
+-   En plus des variables ci-dessus, lorsqu'on ajoute les pourcentages initiaux des populations ayant fait des études supérieures, de ceux nés à l'étranger et des femmes en âge de travailler qui ont un emploi, on obtient les mêmes constats.\
+-   Dans la colonne 5, en plus des variables décrites dans la colonne 3, nous ajoutons 2 autres variables dont le pourcentage initial des employés de routine. En effet, lorsque ce pourcentage augmente d'un point, la variation de l'emploie dans le secteur manufacturier diminue de 0,23 point.\
+-   Dans la dernière colonne, l'on fait une regression avec toutes les variables explicatives citées ci-dessus et l'on obtient une corrélation positive avec l'emploi dans le secteur manufacturier et : le pourcentage initial de la population ayant effectué des études supérieures ainsi que le pourcentage initial de ceux nés à l'étranger.
+
+```{r, echo=FALSE}
+reg_1 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw + t2 |d_tradeotch_pw_lag + t2 , weight=timepwt48, data=datafile)
+rob.se1 = sqrt(diag(vcovCL(reg_1, cluster= ~ statefip,type="HC1")))
+
+
+reg_2 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw + l_shind_manuf_cbp + t2 |d_tradeotch_pw_lag + l_shind_manuf_cbp + t2, weight=timepwt48, data=datafile)
+rob.se2 = sqrt(diag(vcovCL(reg_2, cluster= ~ statefip,type="HC1")))
+
+
+
+reg_3 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw + l_shind_manuf_cbp + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+ reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+ reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+
+rob.se3 = sqrt(diag(vcovCL(reg_3, cluster= ~ statefip,type="HC1")))
+
+reg_4 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c + l_sh_popfborn + l_sh_empl_f + t2 +
+                reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen +reg_wscen+ reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c + l_sh_popfborn + l_sh_empl_f + t2+
+                reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen +reg_wscen+ reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+
+rob.se4 = sqrt(diag(vcovCL(reg_4, cluster= ~ statefip,type="HC1")))
+
+reg_5 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_routine33 + l_task_outsource + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif | d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_routine33 + l_task_outsource + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48 , data=datafile)
+rob.se5 = sqrt(diag(vcovCL(reg_5, cluster= ~ statefip,type="HC1")))
+
+reg_6 <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.se6 = sqrt(diag(vcovCL(reg_6, cluster= ~ statefip,type="HC1")))
+
+
+stargazer(reg_1, reg_2,reg_3,reg_4,reg_5,reg_6,
+          dep.var.caption="",dep.var.labels="", 
+          omit.stat = c("all"),
+          no.space=TRUE, digits=3,
+          keep=c("d_tradeusch_pw","l_shind_manuf_cbp", "l_sh_popedu_c", "l_sh_popfborn",
+                 "l_sh_empl_f", "l_sh_routine33", "l_task_outsource"),
+          se= list(rob.se1,rob.se2,rob.se3,rob.se4,rob.se5,rob.se6), 
+          column.labels=c(""),
+          title="I. 1990-2007 stacked first differences", type="text", add.lines = list(c("Census division dummies","No","No","Yes","Yes","Yes","Yes"))
+)
+
+sls_1 <- lm(d_tradeusch_pw ~ d_tradeotch_pw_lag + t2 , weight=timepwt48, data=datafile)
+rob.sls1 = sqrt(diag(vcovCL(sls_1, cluster= ~ statefip,type="HC1")))
+
+sls_2 <- lm(d_tradeusch_pw ~ d_tradeotch_pw_lag + l_shind_manuf_cbp + t2, weight=timepwt48, data=datafile)
+rob.sls2 = sqrt(diag(vcovCL(sls_2, cluster= ~ statefip,type="HC1")))
+
+sls_3 <- lm(d_tradeusch_pw ~ d_tradeotch_pw_lag + l_shind_manuf_cbp + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+ reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+
+rob.sls3 = sqrt(diag(vcovCL(sls_3, cluster= ~ statefip,type="HC1")))
+
+sls_4 <- lm(d_tradeusch_pw ~ d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c + l_sh_popfborn + l_sh_empl_f + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen +reg_wscen+ reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+
+rob.sls4 = sqrt(diag(vcovCL(sls_4, cluster= ~ statefip,type="HC1")))
+
+sls_5 <- lm(d_tradeusch_pw ~ d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_routine33 + l_task_outsource + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif , weight=timepwt48 , data=datafile)
+rob.sls5 = sqrt(diag(vcovCL(sls_5, cluster= ~ statefip,type="HC1")))
+
+sls_6 <- lm(d_tradeusch_pw ~ d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.sls6 = sqrt(diag(vcovCL(sls_6, cluster= ~ statefip,type="HC1")))
+
+stargazer(sls_1, sls_2,sls_3,sls_4,sls_5,sls_6,
+          dep.var.caption="",dep.var.labels="",
+          keep.stat=c("rsq"),
+          no.space=TRUE, digits=3,
+          keep=c("d_tradeotch_pw_lag"),
+          se= list(rob.sls1,rob.sls2,rob.sls3,rob.sls4,rob.sls5,rob.sls6), 
+          column.labels=c(""),
+          title="II. 2SLS First stage estimates", type="text"
+)
+```
+
+## Question 2.3 : Replication du tableau 6
+
+```{r, eval = FALSE}
+reg_all <- ivreg(d_avg_lnwkwage ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.all = sqrt(diag(vcovCL(reg_all, cluster= ~ statefip,type="HC1")))
+
+reg_all_m <- ivreg(d_avg_lnwkwage_m ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.all_m = sqrt(diag(vcovCL(reg_all_m, cluster= ~ statefip,type="HC1")))
+
+reg_all_f <- ivreg(d_avg_lnwkwage_f ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.all_f = sqrt(diag(vcovCL(reg_all_f, cluster= ~ statefip,type="HC1")))
+
+stargazer(reg_all,reg_all_m,reg_all_f,
+          dep.var.caption="",dep.var.labels="",dep.var.labels.include=FALSE,
+          omit.table.layout = "n", star.cutoffs = NA,keep.stat=c("rsq"),
+          no.space=TRUE, digits=3,
+          keep=c("d_tradeusch_pw"),
+          se= list(rob.all,rob.all_m,rob.all_f), 
+          column.labels=c("All workers","Males","Females"),
+          title="PanelA. All education levels", type="text"
+)
+```
+
+```{r, eval=FALSE}
+reg_c <- ivreg(d_avg_lnwkwage_c ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.c = sqrt(diag(vcovCL(reg_c, cluster= ~ statefip,type="HC1")))
+
+reg_c_m <- ivreg(d_avg_lnwkwage_c_m ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                     l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                     reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                     l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                     reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.c_m = sqrt(diag(vcovCL(reg_c_m, cluster= ~ statefip,type="HC1")))
+
+reg_c_f <- ivreg(d_avg_lnwkwage_c_f ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                     l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                     reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                     l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                     reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.c_f = sqrt(diag(vcovCL(reg_c_f, cluster= ~ statefip,type="HC1")))
+
+stargazer(reg_c,reg_c_m,reg_c_f,
+          dep.var.caption="",dep.var.labels="", dep.var.labels.include=FALSE,
+          omit.table.layout = "n", star.cutoffs = NA,keep.stat=c("rsq"),
+          no.space=TRUE, digits=3,
+          keep=c("d_tradeusch_pw"),
+          se= list(rob.c,rob.c_m,rob.c_f), 
+          column.labels=c("All workers","Males","Females"),
+          title="PanelB. College education", type="text"
+)
+```
+
+```{r, eval = FALSE}
+
+reg_nc <- ivreg(d_avg_lnwkwage_nc ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.nc = sqrt(diag(vcovCL(reg_nc, cluster= ~ statefip,type="HC1")))
+
+reg_nc_m <- ivreg(d_avg_lnwkwage_nc_m ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.nc_m = sqrt(diag(vcovCL(reg_nc_m, cluster= ~ statefip,type="HC1")))
+
+reg_nc_f <- ivreg(d_avg_lnwkwage_nc_f ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.nc_f = sqrt(diag(vcovCL(reg_nc_f, cluster= ~ statefip,type="HC1")))
+
+stargazer(reg_nc,reg_nc_m,reg_nc_f,
+          dep.var.caption="",dep.var.labels="",dep.var.labels.include=FALSE,
+          omit.table.layout = "n", star.cutoffs = NA,keep.stat=c("rsq"),
+          no.space=TRUE, digits=3,
+          keep=c("d_tradeusch_pw"),
+          se= list(rob.nc,rob.nc_m,rob.nc_f), 
+          column.labels=c("All workers","Males","Females"),
+          title="PanelC. No College education", type="text"
+)
+```
+
+Le Tableau 6 représente également des regressions avec les mêmes variables explicatives présentes à la colonne 6 du tableau 3. Cependant, la variable dépendante est le logarithme du salaire et l'on y ajoute une variable indicatrice de la période.
+
+-   Globalement, l'exposition à l'exportation à tendance à diminuer les salaires, surtout au niveau des hommes.\
+-   Par ailleurs, lorsqu'on s'interesse seulemnt aux travaillleurs de niveau supérieur, la dimininution des salaires induite par l'exposition à l'exportation est d'autant plus accetuée chez les hommes.\
+-   Cependant, en ce qui concerne les travailleurs de niveau non supérieur, la diminution des salaires induite par l'exposition à l'exportation est plus accentuée chez les femmes.
+
+```{r, echo = FALSE, eval = TRUE}
+
+reg_all <- ivreg(d_avg_lnwkwage ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.all = sqrt(diag(vcovCL(reg_all, cluster= ~ statefip,type="HC1")))
+
+reg_all_m <- ivreg(d_avg_lnwkwage_m ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.all_m = sqrt(diag(vcovCL(reg_all_m, cluster= ~ statefip,type="HC1")))
+
+reg_all_f <- ivreg(d_avg_lnwkwage_f ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.all_f = sqrt(diag(vcovCL(reg_all_f, cluster= ~ statefip,type="HC1")))
+
+stargazer(reg_all,reg_all_m,reg_all_f,
+          dep.var.caption="",dep.var.labels="",dep.var.labels.include=FALSE,
+          keep.stat=c("rsq"),
+          no.space=TRUE, digits=3,
+          keep=c("d_tradeusch_pw"),
+          se= list(rob.all,rob.all_m,rob.all_f), 
+          column.labels=c("All workers","Males","Females"),
+          title="PanelA. All education levels", type="text"
+)
+```
+
+```{r, echo=FALSE, eval=TRUE}
+
+reg_c <- ivreg(d_avg_lnwkwage_c ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.c = sqrt(diag(vcovCL(reg_c, cluster= ~ statefip,type="HC1")))
+
+reg_c_m <- ivreg(d_avg_lnwkwage_c_m ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                     l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                     reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                     l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                     reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.c_m = sqrt(diag(vcovCL(reg_c_m, cluster= ~ statefip,type="HC1")))
+
+reg_c_f <- ivreg(d_avg_lnwkwage_c_f ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                     l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                     reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                     l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                     reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.c_f = sqrt(diag(vcovCL(reg_c_f, cluster= ~ statefip,type="HC1")))
+
+stargazer(reg_c,reg_c_m,reg_c_f,
+          dep.var.caption="",dep.var.labels="",dep.var.labels.include=FALSE,
+          keep.stat=c("rsq"),
+          no.space=TRUE, digits=3,
+          keep=c("d_tradeusch_pw"),
+          se= list(rob.c,rob.c_m,rob.c_f), 
+          column.labels=c("All workers","Males","Females"),
+          title="PanelB. College education", type="text"
+)
+```
+
+```{r, echo=FALSE, eval=TRUE}
+
+reg_nc <- ivreg(d_avg_lnwkwage_nc ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.nc = sqrt(diag(vcovCL(reg_nc, cluster= ~ statefip,type="HC1")))
+
+reg_nc_m <- ivreg(d_avg_lnwkwage_nc_m ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.nc_m = sqrt(diag(vcovCL(reg_nc_m, cluster= ~ statefip,type="HC1")))
+
+reg_nc_f <- ivreg(d_avg_lnwkwage_nc_f ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                   l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                   reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.nc_f = sqrt(diag(vcovCL(reg_nc_f, cluster= ~ statefip,type="HC1")))
+
+stargazer(reg_nc,reg_nc_m,reg_nc_f,
+          dep.var.caption="",dep.var.labels="",dep.var.labels.include=FALSE,
+          keep.stat=c("rsq"),
+          no.space=TRUE, digits=3,
+          keep=c("d_tradeusch_pw"),
+          se= list(rob.nc,rob.nc_m,rob.nc_f), 
+          column.labels=c("All workers","Males","Females"),
+          title="PanelC. No College education", type="text"
+)
+
+```
+
+# Question 3 : Conversion des données.
+
+```{r, eval = FALSE}
+path2 = "D:/AMSE_MAG1/Projet_Econometrie/"
+adh = read_dta(paste0(path,"input_ADH.dta"))
+
+```
+
+## Question 3.1 : Vérification de la similarité des résultats entre `input_ADH.dta` et `workfile_china.dta`avec l'exemple de la colonne 6 du tableau 3.
+
+```{r, eval = FALSE}
+
+reg_6_adh <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=adh)
+rob.se6_adh = sqrt(diag(vcovCL(reg_6_adh, cluster= ~ statefip,type="HC1")))
+
+stargazer(reg_6_adh,
+          dep.var.caption="",dep.var.labels="",
+          keep.stat=c("n","rsq"),
+          no.space=TRUE, digits=3,
+          keep=c("d_tradeusch_pw","l_shind_manuf_cbp", "l_sh_popedu_c", "l_sh_popfborn",
+                 "l_sh_empl_f", "l_sh_routine33", "l_task_outsource"),
+          se= list(rob.se6_adh),
+          column.labels=c("(6)"),
+          title="I. 1990-2007 stacked first differences", type="text"
+)
+
+sls_6_adh <- lm(d_tradeusch_pw ~ d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+              l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+              reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.sls6_adh = sqrt(diag(vcovCL(sls_6_adh, cluster= ~ statefip,type="HC1")))
+
+stargazer(sls_6_adh,
+          dep.var.caption="",dep.var.labels="",
+          keep.stat=c("n","rsq"),
+          no.space=TRUE, digits=3,
+          keep=c("d_tradeotch_pw_lag"),
+          se= list(rob.sls6_adh), 
+          column.labels=c("(6)"),
+          title="II. 2SLS First stage estimates", type="text"
+)
+```
+
+```{r, echo = FALSE, eval =TRUE}
+reg_6_adh <- ivreg(d_sh_empl_mfg ~ d_tradeusch_pw + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif|d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+                 l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2+
+                 reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=adh)
+rob.se6_adh = sqrt(diag(vcovCL(reg_6_adh, cluster= ~ statefip,type="HC1")))
+
+stargazer(reg_6_adh,
+          dep.var.caption="",dep.var.labels="",
+          omit.stat = c("all"),
+          no.space=TRUE, digits=3,
+          keep=c("d_tradeusch_pw","l_shind_manuf_cbp", "l_sh_popedu_c", "l_sh_popfborn",
+                 "l_sh_empl_f", "l_sh_routine33", "l_task_outsource"),
+          se= list(rob.se6_adh),
+          column.labels=c("(6)"),
+          title="I. 1990-2007 stacked first differences", type="text"
+)
+
+sls_6_adh <- lm(d_tradeusch_pw ~ d_tradeotch_pw_lag + l_shind_manuf_cbp + l_sh_popedu_c +
+              l_sh_popfborn + l_sh_empl_f + l_sh_routine33 + l_task_outsource + t2 +
+              reg_midatl + reg_encen + reg_wncen + reg_satl + reg_escen + reg_wscen+reg_mount + reg_pacif, weight=timepwt48, data=datafile)
+rob.sls6_adh = sqrt(diag(vcovCL(sls_6_adh, cluster= ~ statefip,type="HC1")))
+
+stargazer(sls_6_adh,
+          dep.var.caption="",dep.var.labels="",
+          keep.stat=c("rsq"),
+          no.space=TRUE, digits=3,
+          keep=c("d_tradeotch_pw_lag"),
+          se= list(rob.sls6_adh), 
+          column.labels=c("(6)"),
+          title="II. 2SLS First stage estimates", type="text"
+)
+```
+
+## Question 3.2 :
+
+```{r, eval=FALSE}
+index = c("czone", "year")
+adh %>%
+  select(all_of(index), contains("sh_ind_")) -> adh
+
+adh_long <- gather(adh, ind, sh_ind_, sh_ind_2011:sh_ind_3999, factor_key=TRUE)
+adh_long %>%
+  arrange(czone, year) %>%
+  mutate(ind = str_replace(adh_long$ind, "sh_ind_", "") ) -> adh_long
+adh_long
+```
+
+```{r, echo = FALSE, eval=TRUE, warning=FALSE}
+index = c("czone", "year")
+adh %>%
+  select(all_of(index), contains("sh_ind_")) -> adh
+
+adh_long <- gather(adh, ind, sh_ind_, sh_ind_2011:sh_ind_3999, factor_key=TRUE)
+adh_long %>%
+  arrange(czone, year) %>%
+  mutate(ind = str_replace(adh_long$ind, "sh_ind_", "") ) -> adh_long
+adh_long
+```
+
+```{r,eval=FALSE, message= FALSE}
+adh_long %>%
+  group_by(czone, year) %>%
+  summarise(sh_empl_mfg = sum(sh_ind_)) -> t_share
+
+t_share %>%
+  group_by(czone) %>%
+  summarise(d_sh_empl_mfg= sh_empl_mfg - lag(sh_empl_mfg)) -> change_in_sahre
+change_in_sahre
+```
+
+```{r,echo=FALSE,message=FALSE}
+adh_long %>%
+  group_by(czone, year) %>%
+  summarise(sh_empl_mfg = sum(sh_ind_)) -> t_share
+
+t_share %>%
+  group_by(czone) %>%
+  summarise(d_sh_empl_mfg= sh_empl_mfg - lag(sh_empl_mfg)) -> change_in_sahre
+filter(change_in_sahre,!is.na(d_sh_empl_mfg))
+```
